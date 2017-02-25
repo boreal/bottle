@@ -12,6 +12,7 @@ requests.packages.urllib3.disable_warnings(InsecurePlatformWarning)
 BOT_ID = os.environ.get("SLACK_BOT_ID")
 BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN")
 API_TOKEN = os.environ.get("SLACK_API_TOKEN")
+DOC_URL = os.environ.get("SLACK_BOT_DOCS")
 
 # constants
 AT_BOT = "<@" + BOT_ID + ">"
@@ -160,15 +161,14 @@ def user_info(user):
 
 def invite_new_hire( params ):
     response = []
-    welcome_to_league = 'https://everlong.atlassian.net/wiki/pages/viewpage.action?pageId=13506051'
     #default_channels = ['back-end-team', 'front-end-team', 'product-support', 'product-team', 'production-deployment', 'release_qa', 'tech', 'leaguelife', 'market-news', 'dose-of-wellness', 'api-announcements', 'backend-pull-requests', 'mobile-apps-team', 'product-member-ux', 'beer-o_clock']
     default_channels = ['onboard-test', 'onboard-test-1', 'onboard-test-2', 'onboard-test-3']
-    user = user_info(params[2])
+    user = user_info(params[1])
     # No matching user found.
     if user is None:
         return "User not found"
     # No channels specified therefore add the user to the default channels.
-    if ( len(params) < 4 ):
+    if ( len(params) < 3 ):
         for channel in default_channels:
             chaninfo = channel_info(channel)
             print "CHANNEL INFO: %s" % chaninfo
@@ -188,6 +188,8 @@ def invite_new_hire( params ):
             response.append(re)
 
     return response
+
+# def share_docs( params ):
 
 def http_request(url, data=None, headers=None, timeout=20, tries=1):
     if headers is None:
@@ -227,19 +229,19 @@ def parse_slack_output(slack_rtm_output):
             if output and 'text' in output and AT_BOT in output['text']:
                 # return text after the @ mention, whitespace removed
                 #return output['text'].split(AT_BOT)[1].strip().lower(), \
-                return output['text'].split(AT_BOT)[1].strip(), \
-                       output['channel']
+                return output['text'].split(AT_BOT)[1].strip(), output['channel']
     return None, None
 
 def handle_command(command, channel):
+    # Commands bottle understands
+    do = ['onboard', 'user', 'channel']
+    commands = command.split()
     # Default message when calling the bot.
-    send_response = "Not sure what you mean. Use the *" + EXAMPLE_COMMAND + \
-               "* command delimited by spaces. Like so:\n" + \
-               '```@bottle do chan leaguelife\n@bottle do onboard aristotle```'
-    if command.startswith(EXAMPLE_COMMAND):
+    send_response = "Oh hai! Bottle is confused. Try a command like one of these::\n" + \
+                    '```@bottle channel leaguelife\n@bottle onboard aristotle\n@bottle user aristotle```'
+    if commands[0] in do:
         #slack_client.api_call("chat.postMessage", channel=channel, text="Processing your request...", as_user=True)
-        commands = command.split()
-        if (commands[1] == "onboard" ):
+        if (commands[0] == "onboard" ):
             success = ''
             fail = ''
             response = invite_new_hire(commands)
@@ -258,15 +260,15 @@ def handle_command(command, channel):
                         else:
                             fail += invite['failchan'] + " "
                 if success:
-                    send_response = "%s was added to %s." % (commands[2], success)
+                    send_response = "%s was added to %s." % (commands[1], success)
                 if fail:
-                    send_response += " Failed to add %s to %s." % (commands[2], fail)
+                    send_response += " Failed to add %s to %s." % (commands[1], fail)
             else:
                 send_response = response
 
         # Get channel info
-        elif (commands[1] == "chan"):
-            response = channel_info(commands[2])
+        elif (commands[0] == "channel"):
+            response = channel_info(commands[1])
             if response is not None:
                 send_response = '```Channel Name: ' + response['name'] + '\n'
                 send_response += 'Channel ID: ' + response['id'] + '\n'
@@ -274,16 +276,18 @@ def handle_command(command, channel):
                     send_response += 'Member Count: %d\n' % (response['num_members'])
                 send_response += 'Channel type: ' + response['chan_type'] + '```'
             else:
-                send_response = "Invalid %s parameter: %s" % (commands[1], commands[2])
+                send_response = "Invalid %s parameter: %s" % (commands[0], commands[1])
         # Get user info
-        elif (commands[1] == "user"):
-            response = user_info(commands[2])
+        elif (commands[0] == "user"):
+            response = user_info(commands[1])
             if response is not None:
                 send_response = '```User Name: ' + response['name'] + '\n'
                 send_response += 'User ID: ' + response['id'] + '\n'
                 send_response += 'Real Name: ' + response['profile']['first_name'] + " " + response['profile']['last_name'] + '```'
+            elif ( commands[1] == "aristotle"):
+                send_response = "No silly! Aristotle is just an example. Specify a real slack user."
             else:
-                send_response = "Invalid %s parameter: %s" % (commands[1], commands[2])
+                send_response = "Invalid %s parameter: %s" % (commands[0], commands[1])
         # No command given. Send snarky reply.
         else:
             send_response = "Sure...write some more code then I can do that!"
