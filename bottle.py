@@ -129,6 +129,7 @@ Return the user object when the user name or ID is provided.
 '''
 def user_info(user):
     global users
+    user = user.lower()
 
     if (users is None):
         print "users object is empty. Fetching from source."
@@ -146,10 +147,13 @@ def user_info(user):
     result = None
     perf_time_before = time.clock()
     for x in range (0, len(users['members'])):
-        if (users['members'][x]['name'] == user):
+        if ( users['members'][x]['name'] == user ):
             result = users['members'][x]
             break
-        elif (users['members'][x]['id'] == user):
+        elif ( users['members'][x]['id'] == user.upper() ):
+            result = users['members'][x]
+            break
+        elif ( user in users['members'][x]['profile']['real_name'].lower() ):
             result = users['members'][x]
             break
     perf_time_after = time.clock()
@@ -189,8 +193,21 @@ def invite_new_hire( params ):
 
     return response
 
-# def share_docs( params ):
+def share_docs( params ):
+    user = user_info(params[1])
+    # No matching user found.
+    if user is None:
+        return "User not found"
+    im_open = slack_client.api_call( "im.open", user=user['id'] )
+    print "IM.OPEN response: %s" % (im_open)
+    msg_return = slack_client.api_call("chat.postMessage", channel=im_open['channel']['id'], text="Welcome Document: " + DOC_URL, as_user=True)
+    print "MSG RETURN: %s" % msg_return
+    return "\nOnboarding document shared with %s" % ( params[1] )
 
+
+'''
+Make HTTP requests.
+'''
 def http_request(url, data=None, headers=None, timeout=20, tries=1):
     if headers is None:
         headers = {}
@@ -232,13 +249,15 @@ def parse_slack_output(slack_rtm_output):
                 return output['text'].split(AT_BOT)[1].strip(), output['channel']
     return None, None
 
+def print_help():
+    send_response = "Oh hai! Bottle is happy to serve. Please try a command like one of these::\n" + \
+                    '```@bottle onboard aristotle\n@bottle channel general\n@bottle user aristotle```'
+    slack_client.api_call("chat.postMessage", channel=channel, text=send_response, as_user=True)
+
 def handle_command(command, channel):
     # Commands bottle understands
     do = ['onboard', 'user', 'channel']
     commands = command.split()
-    # Default message when calling the bot.
-    send_response = "Oh hai! Bottle is confused. Try a command like one of these::\n" + \
-                    '```@bottle channel leaguelife\n@bottle onboard aristotle\n@bottle user aristotle```'
     if commands[0] in do:
         #slack_client.api_call("chat.postMessage", channel=channel, text="Processing your request...", as_user=True)
         if (commands[0] == "onboard" ):
@@ -265,6 +284,8 @@ def handle_command(command, channel):
                     send_response += " Failed to add %s to %s." % (commands[1], fail)
             else:
                 send_response = response
+            response = share_docs( commands )
+            send_response += response
 
         # Get channel info
         elif (commands[0] == "channel"):
@@ -291,9 +312,9 @@ def handle_command(command, channel):
         # No command given. Send snarky reply.
         else:
             send_response = "Sure...write some more code then I can do that!"
-
-    slack_client.api_call("chat.postMessage", channel=channel,
-                          text=send_response, as_user=True)
+        slack_client.api_call("chat.postMessage", channel=channel, text=send_response, as_user=True)
+    else:
+        print_help()
 
 if __name__ == "__main__":
     READ_WEBSOCKET_DELAY = 1 # 1 second delay between reading from firehose
@@ -303,6 +324,8 @@ if __name__ == "__main__":
             command, channel = parse_slack_output(slack_client.rtm_read())
             if command and channel:
                 handle_command(command, channel)
+            else:
+                send_response = print_help()
             time.sleep(READ_WEBSOCKET_DELAY)
     else:
         print("Connection failed. Invalid Slack token or bot ID?")
