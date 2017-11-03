@@ -165,7 +165,7 @@ def user_info(user):
 
 def invite_new_hire( params ):
     response = []
-    #default_channels = ['back-end-team', 'front-end-team', 'product-support', 'product-team', 'production-deployment', 'release_qa', 'tech', 'leaguelife', 'market-news', 'dose-of-wellness', 'api-announcements', 'backend-pull-requests', 'mobile-apps-team', 'product-member-ux', 'beer-o_clock']
+    #default_channels = ['back-end-team', 'front-end-team', 'product-support', 'product-team', 'production-deployment', 'release_qa', 'tech', 'life', 'market-news', 'dose-of-wellness', 'api-announcements', 'backend-pull-requests', 'mobile-apps-team', 'product-member-ux', 'beer-o_clock']
     default_channels = ['onboard-test', 'onboard-test-1', 'onboard-test-2', 'onboard-test-3']
     user = user_info(params[1])
     # No matching user found.

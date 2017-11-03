@@ -4,7 +4,7 @@ All the hard stuff is made easy because of https://github.com/slackapi/python-sl
 
 ## Installing and running
 
-Add a bot to the org: https://everlong.slack.com/apps/manage/custom-integrations
+Add a bot to the org: https://your_org_name.slack.com/apps/manage/custom-integrations
 Take note of the token. It will be required as an environment variable
 SLACK_BOT_TOKEN
 
